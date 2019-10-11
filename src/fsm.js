@@ -1,97 +1,82 @@
 class FSM {
     constructor(config) {  
-      this.conf = config;
-      this.conf.activeState = this.conf.initial;
-      this.stateArr = [];
-      this.arrLength = 0;
-      this.undoCall=0;
-      this.notAvaible=0;
-
- }
+        this.config = config;
+        this.config.initial = config.initial
+        this.config.activeState = config.initial;
+        this.statesList = [config.initial];
+        this.redoStatesList = [config.initial];
+        this.lastAction = null;
+        this.history = 0;
+    }
     getState() {        
-        return this.conf.activeState;
+        return this.config.activeState;
     }
      
     changeState(state) {
-    this.undoCall=0;
-    if ( state in this.conf.states) {
-        this.conf.activeState = state;
-        this.arrLength++;
-        this.stateArr[this.arrLength] = state;        
-    } else error(function() {});
-    return this.conf.activeState;
+        if(this.config.states[state]) {
+            this.config.activeState = state;
+            this.statesList.push(state);
+            this.lastAction = null;
+            this.history++;
+        } else {
+            error(function() {})
+        }
     }
 
     trigger(event) {
-         this.undoCall=0;
-         var key = this.conf.activeState;
-            if (this.conf.states[key].transitions[event] ){            
-            this.conf.activeState = this.conf.states[key].transitions[event];
-            this.arrLength++;
-            this.stateArr[this.arrLength]= this.conf.activeState;
-        }  else error(function() {});  
-    this.notAvaible++;
-            return this.conf.activeState;              
- }
+        let currentState = this.getState();
+        if(this.config.states[currentState].transitions[event]) {
+            this.config.activeState = this.config.states[currentState].transitions[event];
+            this.statesList.push(this.config.activeState);
+            this.lastAction = null;
+            this.history++;
+        } else {
+            error(function() {});    
+        }
+        return this.config.activeState;   
 
-    reset() {
-        this.conf.activeState = this.conf.initial;
-        return this.conf.activeState;    }
-     
-    getStates(event){
-        var arr = [];
-        var arr2= [];
-        var i=0;      
-        for(var key in this.conf.states){
-            arr[i] = key;
-            i++;
-        }
-         
-            if(!event) return arr;
-        for (var i=0, k=0; k<4; k++){
-        if (this.conf.states[arr[k]].transitions[event]){
-            arr2[i]=arr[k];
-            i++;
-        }
     }
 
-        return arr2;
+    reset() {
+      this.config.activeState = this.config.initial;
+      this.statesList = [this.config.activeState];
+    }
+     
+    getStates(event){
+        let answer = [];
+        for (let key in this.config.states) {
+            if(this.config.states[key].transitions[event] || !event) {
+                answer.push(key);
+            }
+        }
+        return answer;
     }
      
     undo() {
-        if ( !this.arrLength && this.undoCall != 0 || this.conf.activeState=="normal") 
+        if(this.statesList.length > 1 && this.history) {
+            this.redoStatesList.push(this.config.activeState);
+            this.config.activeState = this.statesList[this.statesList.length - 2];
+            this.statesList.pop();            
+            this.lastAction = "undo";
+            return true;      
+        } else {   
             return false;
-        else {
-            if(this.arrLength == 1){
-            this.conf.activeState = this.conf.initial;
-            this.arrLength = 0;
-            this.notAvaible--;
-        } 
-            else {
-                this.arrLength--;
-                this.conf.activeState = this.stateArr[this.arrLength];
         }
-        }
-        this.undoCall++;
-            return true;
     }
      
     redo() {
-        if(!this.arrLength && this.undoCall == 0) return false;
-        else { if (this.notAvaible<2 && this.undoCall<1) return false;
-            else{
-        this.arrLength++;
-        this.conf.activeState = this.stateArr[this.arrLength];
-        this.undoCall--;
-         return true;
-     }
-    }
+        if(this.redoStatesList.length > 1 && this.lastAction && this.history) {
+            this.config.activeState = this.redoStatesList[this.redoStatesList.length - 1];
+            this.redoStatesList.pop();
+            this.statesList.push(this.config.activeState);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     clearHistory() {
-    this.arrLength=0;
-    this.notAvaible =0;
-    this.undoCall=0.5;
+        this.history = 0
     }
 }
 
